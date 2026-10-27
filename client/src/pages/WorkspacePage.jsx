@@ -26,6 +26,83 @@ import {
   Compass
 } from 'lucide-react';
 
+function ChatMessageRenderer({ content }) {
+  if (!content) return null;
+
+  let parsedJson = null;
+  const trimmed = content.trim();
+
+  try {
+    let jsonStr = trimmed;
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.substring(7);
+      if (jsonStr.endsWith('```')) jsonStr = jsonStr.substring(0, jsonStr.length - 3);
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.substring(3);
+      if (jsonStr.endsWith('```')) jsonStr = jsonStr.substring(0, jsonStr.length - 3);
+    }
+    jsonStr = jsonStr.trim();
+    if (jsonStr.startsWith('{') && jsonStr.endsWith('}')) {
+      parsedJson = JSON.parse(jsonStr);
+    }
+  } catch {
+    parsedJson = null;
+  }
+
+  if (parsedJson) {
+    const data = parsedJson.investigative_conclusion || parsedJson;
+    return (
+      <div className="space-y-3 text-xs leading-relaxed">
+        {data.conclusion && (
+          <div className="p-3 bg-detective-surface rounded border border-detective-gold/40">
+            <div className="font-bold font-cinzel text-detective-gold mb-1">
+              {data.conclusion.status ? `Conclusion: ${data.conclusion.status}` : 'Conclusion'}
+            </div>
+            <p className="text-detective-text">
+              {data.conclusion.summary || data.conclusion.explanation || JSON.stringify(data.conclusion)}
+            </p>
+          </div>
+        )}
+
+        {data.incident_summary && (
+          <p className="text-detective-muted italic">{data.incident_summary}</p>
+        )}
+
+        {Array.isArray(data.deductions) && data.deductions.length > 0 && (
+          <div>
+            <div className="font-bold text-detective-gold uppercase text-[10px] font-mono mb-1">
+              Key Deductions:
+            </div>
+            <ul className="list-disc list-inside space-y-1">
+              {data.deductions.map((d, i) => (
+                <li key={i} className="text-detective-text">
+                  {typeof d === 'string' ? d : JSON.stringify(d)}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {Array.isArray(data.analysis_of_suspects) && (
+          <div className="space-y-2 pt-2 border-t border-detective-border/50">
+            <div className="font-bold text-detective-gold uppercase text-[10px] font-mono">
+              Suspect Findings:
+            </div>
+            {data.analysis_of_suspects.map((s, i) => (
+              <div key={i} className="p-2.5 bg-detective-surface/60 rounded border border-detective-border">
+                <span className="font-bold text-white">{s.name} {s.role ? `(${s.role})` : ''}: </span>
+                <span className="text-detective-muted">{s.findings || s.plausibilitySummary || s.statement}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return <p className="whitespace-pre-wrap">{content}</p>;
+}
+
 export default function WorkspacePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -792,7 +869,7 @@ export default function WorkspacePage() {
                       </span>
                     </div>
 
-                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                    <ChatMessageRenderer content={msg.content} />
                   </div>
                 </div>
               ))

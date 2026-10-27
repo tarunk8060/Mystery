@@ -330,6 +330,21 @@ export async function reanalyzeCase(caseData) {
 }
 
 /**
+ * Builds system instructions specifically for interactive detective chat.
+ */
+function buildDetectiveChatSystemPrompt() {
+  return `You are the Lead Detective and Forensic Evidence Analyst for "AI Mystery Room".
+You are in the detective war room speaking directly with the lead investigator.
+
+MANDATORY RULES:
+1. NATURAL HUMAN CONVERSATION: Respond in direct, sharp, professional detective prose. DO NOT output JSON or code fences in chat. Use clear paragraphs, bold text, and bullet points.
+2. STRICT EVIDENCE CITATIONS: Cite exact clue codes (e.g., CLUE-1, CLUE-2) whenever referencing evidence.
+3. ZERO HALLUCINATIONS: Analyze ONLY the facts and clues provided. If asked about something not in evidence, state clearly: "That information is not in the case file."
+4. EXPOSE CONTRADICTIONS: Highlight any lies, discrepancies, and alibi conflicts between suspect statements and evidence timestamps.
+5. NO PREMATURE GUILT: Distinguish facts from circumstantial suspicions. Clearly state when evidence is insufficient or inconclusive.`;
+}
+
+/**
  * Answers a contextual detective question about a specific case.
  */
 export async function answerCaseQuestion(caseData, messageHistory = [], userQuestion) {
@@ -342,13 +357,10 @@ export async function answerCaseQuestion(caseData, messageHistory = [], userQues
   }));
 
   const systemInstructions = `
-${buildDetectiveSystemPrompt()}
+${buildDetectiveChatSystemPrompt()}
 
-You are actively interrogating and discussing the case file with the lead investigator.
-Answer their questions directly, objectively, and incisively based ONLY on the evidence in the case file.
-If the investigator asks about something not in evidence, clearly state: "That information is not in the case file."
-CITE EXISTING CLUE CODES (e.g. CLUE-1) wherever evidence is discussed.
-Maintain a sharp, professional, cinematic detective persona.
+CURRENT CASE FILE:
+${caseContext}
 `;
 
   try {
