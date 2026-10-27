@@ -186,32 +186,45 @@ export default function SettingsPage() {
         {checkingHealth ? (
           <div className="text-xs font-mono text-detective-muted">Checking API connectivity...</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
-            
-            <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
-              <span className="text-detective-muted block mb-1">Backend Server:</span>
-              <span className="text-[#70C49B] font-bold flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[#70C49B] inline-block" />
-                Operational ({health?.environment || 'development'})
-              </span>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs font-mono">
+              <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
+                <span className="text-detective-muted block mb-1">Backend Server:</span>
+                <span className="text-[#70C49B] font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#70C49B] inline-block" />
+                  Operational ({health?.environment || 'development'})
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
+                <span className="text-detective-muted block mb-1">Gemini API Key:</span>
+                <span className={`font-bold flex items-center gap-1.5 ${health?.geminiConfigured ? 'text-[#70C49B]' : 'text-[#E16D70]'}`}>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {health?.geminiConfigured ? 'Active & Configured' : 'Missing (Not Configured)'}
+                </span>
+              </div>
+
+              <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
+                <span className="text-detective-muted block mb-1">Database Connectivity:</span>
+                <span className={`font-bold flex items-center gap-1.5 ${health?.dbConnected ? 'text-[#70C49B]' : 'text-[#E16D70]'}`}>
+                  <Database className="w-3.5 h-3.5" />
+                  {health?.dbConnected ? 'Connected (Ready)' : 'Disconnected'}
+                </span>
+              </div>
             </div>
 
-            <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
-              <span className="text-detective-muted block mb-1">Google Gemini Engine:</span>
-              <span className="text-detective-gold font-bold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
-                {health?.geminiModel || 'gemini-2.5-flash'}
-              </span>
-            </div>
-
-            <div className="p-3.5 bg-detective-surface rounded border border-detective-border">
-              <span className="text-detective-muted block mb-1">Database Connectivity:</span>
-              <span className={`font-bold flex items-center gap-1.5 ${health?.dbConnected ? 'text-[#70C49B]' : 'text-[#E16D70]'}`}>
-                <Database className="w-3.5 h-3.5" />
-                {health?.dbConnected ? 'MongoDB Connected' : 'Disconnected / Memory Mode'}
-              </span>
-            </div>
-
+            {!health?.geminiConfigured && (
+              <div className="p-3.5 rounded bg-[#E16D70]/10 border border-[#E16D70]/30 text-xs">
+                <div className="font-semibold text-white mb-1 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-[#E16D70]" />
+                  <span>AI Detective Reasoning is currently paused</span>
+                </div>
+                <p className="text-detective-muted leading-relaxed">
+                  The backend requires a Google Gemini API key to run forensic deductions and chat interrogations.
+                  Get a free key at <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-detective-gold underline font-bold">Google AI Studio</a> and set <code>GEMINI_API_KEY=your_key</code> in your <code>.env</code> file.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

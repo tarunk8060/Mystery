@@ -40,6 +40,7 @@ export default function WorkspacePage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [sendingChat, setSendingChat] = useState(false);
   const [error, setError] = useState(null);
+  const [chatError, setChatError] = useState(null);
 
   // Evidence Board Filters
   const [evidenceTypeFilter, setEvidenceTypeFilter] = useState('All');
@@ -116,6 +117,7 @@ export default function WorkspacePage() {
     if (!query.trim() || sendingChat) return;
 
     setSendingChat(true);
+    setChatError(null);
     setChatInput('');
 
     // Optimistically add user message
@@ -137,7 +139,7 @@ export default function WorkspacePage() {
         ]);
       }
     } catch (err) {
-      setError(`Detective Interrogation Error: ${err.message}`);
+      setChatError(`Detective Interrogation Error: ${err.message}`);
       setChatMessages((prev) => prev.filter((m) => m._id !== tempUserMsg._id));
     } finally {
       setSendingChat(false);
@@ -286,6 +288,30 @@ export default function WorkspacePage() {
           </Link>
         </div>
       </div>
+
+      {/* Prominent Error Alert Banner */}
+      {error && (
+        <div className="p-4 rounded-lg bg-[#E16D70]/15 border border-[#E16D70]/40 text-detective-text text-xs flex items-center justify-between gap-3 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-5 h-5 text-[#E16D70] shrink-0" />
+            <div>
+              <p className="font-semibold text-white">Investigation Engine Error</p>
+              <p className="text-detective-muted mt-0.5">{error}</p>
+              {error.includes('Gemini API key') && (
+                <p className="text-detective-gold mt-1">
+                  Tip: Get a free key at <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="underline font-bold">Google AI Studio</a> and paste it into your <code>.env</code> file.
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-detective-muted hover:text-white px-2 py-1 rounded text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Stale Analysis Alert Banner */}
       {investigation.isAnalysisStale && (
@@ -783,6 +809,20 @@ export default function WorkspacePage() {
 
             <div ref={chatBottomRef} />
           </div>
+
+          {/* Chat Error Alert */}
+          {chatError && (
+            <div className="px-4 py-2.5 bg-[#E16D70]/15 border-t border-b border-[#E16D70]/30 text-xs text-[#E16D70] flex items-center justify-between">
+              <span>{chatError}</span>
+              <button
+                type="button"
+                onClick={() => setChatError(null)}
+                className="underline text-[11px] hover:text-white"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
 
           {/* Chat Input Bar */}
           <form

@@ -65,7 +65,7 @@ export const UpdateCaseSchema = z.object({
     'Fraud',
     'General mystery',
     'Other',
-  ]).optional(),
+  ]),
   description: z.string().trim().min(10).max(10000).optional(),
   incidentDate: z.string().max(100).optional(),
   location: z.string().max(200).optional(),
@@ -77,9 +77,9 @@ export const ChatInputSchema = z.object({
   message: z.string({ required_error: 'Message is required' }).trim().min(1, 'Message cannot be empty').max(3000),
 });
 
-// Zod Schema for Structured AI Analysis Output
+// Zod Schema for Structured AI Analysis Output (Robust against nulls/omissions)
 export const AIAnalysisOutputSchema = z.object({
-  summary: z.string().min(10, 'Summary too brief').max(5000),
+  summary: z.string().min(5, 'Summary too brief').max(5000),
   conclusion: z.object({
     status: z.enum([
       'Strongly supported',
@@ -87,20 +87,20 @@ export const AIAnalysisOutputSchema = z.object({
       'Inconclusive',
       'Contradicted by available evidence',
     ]),
-    hypothesis: z.string().min(5),
+    hypothesis: z.string().min(3),
     confidence: z.enum(['high', 'medium', 'low']),
-    explanation: z.string().min(10),
-    primaryCulpritOrCause: z.string().default('Undetermined'),
+    explanation: z.string().min(5),
+    primaryCulpritOrCause: z.string().nullable().optional().transform((v) => v || 'Undetermined'),
   }),
   supportingEvidence: z.array(
     z.object({
       clueCode: z.string(),
-      relevance: z.string().min(3),
+      relevance: z.string().min(1),
     })
   ).default([]),
   contradictions: z.array(
     z.object({
-      description: z.string().min(3),
+      description: z.string().min(1),
       involvedSuspects: z.array(z.string()).default([]),
       conflictingClueCodes: z.array(z.string()).default([]),
     })
@@ -124,7 +124,7 @@ export const AIAnalysisOutputSchema = z.object({
     z.object({
       time: z.string(),
       event: z.string(),
-      sourceClueCode: z.string().default(''),
+      sourceClueCode: z.string().nullable().optional().transform((v) => v || ''),
     })
   ).default([]),
   missingInformation: z.array(z.string()).default([]),

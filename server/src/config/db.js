@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { config } from './env.js';
+import { activateInMemoryFallback, inMemoryStore } from './memoryStore.js';
 
 let isConnected = false;
 
@@ -12,17 +13,20 @@ export async function connectDB(customUri = null) {
 
   try {
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000,
     });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn.connection;
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
     if (config.nodeEnv === 'production') {
+      console.error(`MongoDB Connection Error: ${error.message}`);
       throw error;
     }
-    // In development without a local MongoDB running, we log clearly
+
+    // In development mode, automatically activate in-memory database store
+    console.warn(`Local MongoDB not detected (${error.message}).`);
+    activateInMemoryFallback();
     return null;
   }
 }
@@ -35,5 +39,5 @@ export async function disconnectDB() {
 }
 
 export function isDbConnected() {
-  return mongoose.connection.readyState === 1;
+  return mongoose.connection.readyState === 1 || inMemoryStore.isFallbackActive;
 }

@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import dotenv from 'dotenv';
 import { config } from '../config/env.js';
 import { AIAnalysisOutputSchema } from '../validators/caseValidators.js';
 import { AIProviderError } from '../utils/errors.js';
@@ -7,8 +8,15 @@ let aiClientInstance = null;
 
 export function getGeminiClient() {
   if (!config.geminiApiKey) {
+    dotenv.config();
+    if (process.env.GEMINI_API_KEY) {
+      config.geminiApiKey = process.env.GEMINI_API_KEY;
+    }
+  }
+
+  if (!config.geminiApiKey) {
     throw new AIProviderError(
-      'Gemini API key is not configured. Please set GEMINI_API_KEY in your environment.',
+      'Gemini API key is not configured. Please set GEMINI_API_KEY in your .env file.',
       503
     );
   }
@@ -89,8 +97,6 @@ ${cluesList || 'No clues registered yet.'}
  */
 function validateCrossReferences(analysisData, caseData) {
   const existingClueCodes = new Set((caseData.clues || []).map(c => c.clueCode));
-  const existingSuspects = new Set((caseData.suspects || []).map(s => s.name.toLowerCase().trim()));
-
   const invalidClues = [];
 
   // Check supporting evidence
@@ -137,6 +143,39 @@ function extractJsonString(text) {
     cleaned = cleaned.substring(0, cleaned.length - 3);
   }
   return cleaned.trim();
+}
+
+/**
+ * Helper to generate content with automatic model fallback if high demand occurs.
+ */
+async function generateWithFallback(ai, options) {
+  const modelsToTry = [
+    config.geminiModel,
+    'gemini-3.5-flash',
+    'models/gemini-2.5-flash',
+    'gemini-2.5-flash',
+  ];
+
+  let lastError = null;
+
+  for (const model of modelsToTry) {
+    try {
+      const response = await ai.models.generateContent({
+        ...options,
+        model,
+      });
+      return response;
+    } catch (err) {
+      lastError = err;
+      if (err.status === 503 || err.status === 404) {
+        console.warn(`Model ${model} unavailable (${err.status}). Trying fallback...`);
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -196,7 +235,7 @@ Output ONLY a single raw JSON object matching the following structure:
     {
       "time": "Time or sequence indicator",
       "event": "What occurred at this step",
-      "sourceClueCode": "Optional CLUE-X"
+      "sourceClueCode": "Optional CLUE-X or empty string"
     }
   ],
   "missingInformation": [
@@ -215,11 +254,10 @@ ${caseContext}
 `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: config.geminiModel,
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
-        temperature: 0.2, // Low temperature for high analytical accuracy
+        temperature: 0.2,
         responseMimeType: 'application/json',
       },
     });
@@ -258,7 +296,6 @@ ${caseContext}
     const crossRef = validateCrossReferences(validatedData, caseData);
     if (!crossRef.isValid) {
       console.warn('AI referenced non-existent clues:', crossRef.invalidClues);
-      // Clean invalid references rather than failing entirely if retry exhausted
       validatedData.supportingEvidence = validatedData.supportingEvidence.filter(
         item => !crossRef.invalidClues.includes(item.clueCode)
       );
@@ -286,7 +323,7 @@ ${caseContext}
 }
 
 /**
- * Re-analyzes an existing case (alias with identical constraints).
+ * Re-analyzes an existing case.
  */
 export async function reanalyzeCase(caseData) {
   return analyzeCase(caseData);
@@ -331,8 +368,7 @@ Maintain a sharp, professional, cinematic detective persona.
       },
     ];
 
-    const response = await ai.models.generateContent({
-      model: config.geminiModel,
+    const response = await generateWithFallback(ai, {
       contents,
       config: {
         temperature: 0.3,
