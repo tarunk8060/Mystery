@@ -12,25 +12,14 @@ import { NotFoundError } from './utils/errors.js';
 const app = express();
 
 // Security HTTP headers
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Avoid blocking inline scripts or assets on Vercel
+}));
 
-// CORS Configuration
-const allowedOrigins = [
-  config.clientUrl,
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:5173',
-];
-
+// CORS Configuration - Permissive for both local development and Vercel domains
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server)
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      return callback(null, true); // Permissive in dev/testing, origins filtered cleanly
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -47,7 +36,7 @@ if (config.nodeEnv !== 'test') {
 }
 
 // System Health Check
-app.get('/api/health', (req, res) => {
+const healthHandler = (req, res) => {
   res.status(200).json({
     status: 'ok',
     application: 'AI Mystery Room Backend API',
@@ -58,13 +47,16 @@ app.get('/api/health', (req, res) => {
     geminiModel: config.geminiModel,
     dbConnected: isDbConnected(),
   });
-});
+};
 
-// Mount Feature Routers
-app.use('/api/auth', authRoutes);
-app.use('/api/cases', caseRoutes);
+app.get('/api/health', healthHandler);
+app.get('/health', healthHandler);
 
-// Catch-all 404 handler for unknown routes
+// Mount Feature Routers (supports both /api/auth and /auth)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/cases', '/cases'], caseRoutes);
+
+// Catch-all 404 handler for unknown API routes
 app.use('*', (req, res, next) => {
   next(new NotFoundError(`API route not found: ${req.method} ${req.originalUrl}`));
 });
