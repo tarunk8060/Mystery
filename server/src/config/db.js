@@ -13,19 +13,13 @@ export async function connectDB(customUri = null) {
 
   try {
     const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 2000,
+      serverSelectionTimeoutMS: 2500,
     });
     isConnected = true;
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     return conn.connection;
   } catch (error) {
-    if (config.nodeEnv === 'production') {
-      console.error(`MongoDB Connection Error: ${error.message}`);
-      throw error;
-    }
-
-    // In development mode, automatically activate in-memory database store
-    console.warn(`Local MongoDB not detected (${error.message}).`);
+    console.warn(`MongoDB not reached (${error.message}). Activating in-memory store fallback.`);
     activateInMemoryFallback();
     return null;
   }

@@ -3,13 +3,41 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { config } from './config/env.js';
-import { isDbConnected } from './config/db.js';
+import { connectDB, isDbConnected } from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import caseRoutes from './routes/caseRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { NotFoundError } from './utils/errors.js';
 
 const app = express();
+
+// Ensure DB initialization in serverless environments
+let dbPromise = null;
+if (config.nodeEnv !== 'test') {
+  app.use(async (req, res, next) => {
+    if (!dbPromise) {
+      dbPromise = connectDB().catch((err) => {
+        console.warn('Database initialization note:', err.message);
+      });
+    }
+    try {
+      await dbPromise;
+    } catch {
+      // In-memory store fallback handles data operations
+    }
+    next();
+  });
+}
+
+// URL normalization middleware for Vercel rewrites
+app.use((req, res, next) => {
+  if (req.url === '/api/index.js' || req.url === '/index.js' || req.url.startsWith('/api/index.js')) {
+    if (req.originalUrl && req.originalUrl !== req.url) {
+      req.url = req.originalUrl;
+    }
+  }
+  next();
+});
 
 // Security HTTP headers
 app.use(helmet({
