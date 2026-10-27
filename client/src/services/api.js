@@ -43,7 +43,7 @@ api.interceptors.response.use(
         error.response?.data?.error?.message ||
         error.response?.data?.message ||
         (is405orStatic
-          ? 'Backend API not connected: Please deploy the backend to Render and set VITE_API_URL in Vercel to your Render backend URL.'
+          ? 'Backend API is initializing or unreachable. Please verify your Vercel deployment has finished building.'
           : error.message || 'An unexpected error occurred. Please check your connection.'),
       code: error.response?.data?.error?.code || (is405orStatic ? 'BACKEND_NOT_CONNECTED' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
