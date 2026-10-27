@@ -36,13 +36,16 @@ api.interceptors.response.use(
       }
     }
 
+    const is405orStatic = error.response?.status === 405 || (error.response?.status === 404 && typeof error.response?.data === 'string' && error.response?.data.includes('<!DOCTYPE'));
+
     const customError = {
       message:
         error.response?.data?.error?.message ||
         error.response?.data?.message ||
-        error.message ||
-        'An unexpected error occurred. Please check your connection.',
-      code: error.response?.data?.error?.code || 'NETWORK_ERROR',
+        (is405orStatic
+          ? 'Backend API not connected: Please deploy the backend to Render and set VITE_API_URL in Vercel to your Render backend URL.'
+          : error.message || 'An unexpected error occurred. Please check your connection.'),
+      code: error.response?.data?.error?.code || (is405orStatic ? 'BACKEND_NOT_CONNECTED' : 'NETWORK_ERROR'),
       status: error.response?.status || 500,
       details: error.response?.data?.error?.details || null,
     };
